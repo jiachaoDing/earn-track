@@ -504,30 +504,35 @@ function App() {
     localStorage.setItem("earnTrack:startTime", String(adjustedStartTime));
   };
 
-  const handleReset = (fromShortcut = false) => {
-    if (!fromShortcut) {
-      localStorage.removeItem("earnTrack:startTime");
-    }
-    // 清除暂停状态和保存的数据
-    localStorage.removeItem("earnTrack:isPaused");
-    localStorage.removeItem("earnTrack:earnings");
-    localStorage.removeItem("earnTrack:elapsedTime");
+  const clearAllData = () => {
+    // 清除所有localStorage数据
+    ["earnTrack:startTime", "earnTrack:isPaused", "earnTrack:earnings", "earnTrack:elapsedTime"]
+      .forEach(key => localStorage.removeItem(key));
+    
+    // 重置所有状态
     lastCelebratedMilestone.current = 0;
     setIsCalculating(false);
     setIsPaused(false);
     setStartTime(null);
     setEarnings(0);
     setElapsedTime(0);
-    if (!fromShortcut) {
-      setCurrentView("settings");
-    } else {
+  };
+
+  const handleReset = (fromShortcut = false) => {
+    clearAllData();
+    
+    if (fromShortcut) {
+      // 快捷重置：显示提示后立即重新开始
       setShowResetMessage(true);
       setTimeout(() => setShowResetMessage(false), 1500);
-
+      
       const now = Date.now();
       setStartTime(now);
       localStorage.setItem("earnTrack:startTime", String(now));
       setIsCalculating(true);
+    } else {
+      // 普通重置：返回设置页面
+      setCurrentView("settings");
     }
   };
 
@@ -1017,7 +1022,11 @@ function App() {
                       <div className="space-y-3">
                         <Button
                           onClick={handleContinue}
-                          className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold py-3 rounded-lg text-base transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/50"
+                          className={`w-full text-white font-semibold py-3 rounded-lg text-base transition-all duration-300 transform hover:scale-105 shadow-lg ${
+                            theme === "dark"
+                              ? "bg-green-800/80 hover:bg-green-700/90 text-gray-400 hover:shadow-green-800/30"
+                              : "bg-green-600 hover:bg-green-500 hover:shadow-green-500/50"
+                          }`}
                         >
                           <Play className="h-5 w-5 mr-2" />
                           继续计算
@@ -1025,7 +1034,11 @@ function App() {
                         <Button
                           onClick={() => handleReset()}
                           variant="outline"
-                          className="w-full font-semibold py-3 rounded-lg text-base transition-all duration-300 transform hover:scale-105"
+                          className={`w-full font-semibold py-3 rounded-lg text-base transition-all duration-300 transform hover:scale-105 ${
+                            theme === "dark"
+                              ? "bg-gray-800/50 border-gray-700 text-gray-400 hover:bg-gray-800/50 hover:text-gray-300 hover:border-gray-600"
+                              : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                          }`}
                         >
                           重新开始
                         </Button>
