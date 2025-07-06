@@ -557,7 +557,7 @@ function App() {
                   }
                 >
                   <div
-                    className="flex items-center justify-between p-4 border-b"
+                    className="flex items-center justify-between p-4 border-b relative"
                     style={{
                       borderColor:
                         theme === "dark"
@@ -580,6 +580,15 @@ function App() {
                       >
                         躺赚时钟
                       </h1>
+                      <p
+                        className={`text-sm ${
+                          theme === "dark" ? "text-gray-400" : "text-gray-500"
+                        }`}
+                      >
+                        {slogan}
+                      </p>
+
+                      
                     </div>
                     <div className="absolute top-4 right-4">
                       <Button
