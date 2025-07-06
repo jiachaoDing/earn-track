@@ -20,10 +20,10 @@
 ## 📸 预览
 
 ### 设置界面
-![设置界面](https://via.placeholder.com/800x600?text=设置界面)
-
+![设置界面](./screenshots/settingPage.png)
+s
 ### 计时界面
-![计时界面](https://via.placeholder.com/800x600?text=计时界面)
+![计时界面](./screenshots/timePage.png)
 
 ## 🚀 在线体验
 
