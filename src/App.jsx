@@ -982,7 +982,11 @@ function App() {
                           </p>
                         </div>
 
-                        <div className="p-3 rounded-lg bg-yellow-400/20 text-yellow-300">
+                        <div className={`p-3 rounded-lg ${
+                          theme === "dark"
+                            ? "bg-yellow-400/20 text-yellow-300"
+                            : "bg-yellow-400/30 text-yellow-700"
+                        }`}>
                           <p className="text-xs font-bold leading-relaxed">
                             <span className="font-extrabold">注意:</span>{" "}
                             手机壁纸模式下，由于系统限制，无法使用手势交互（双击、滑动等）。
@@ -995,18 +999,18 @@ function App() {
                           </h4>
                           <ul className="list-disc list-inside text-sm space-y-1 opacity-80">
                             <li>
-                              <strong className="text-white/90">
+                              <strong className={theme === "dark" ? "text-white/90" : "text-gray-800/90"}>
                                 Windows:
                               </strong>{" "}
                               使用 Lively Wallpaper
                               或类似软件，将本页面设为壁纸。
                             </li>
                             <li>
-                              <strong className="text-white/90">macOS:</strong>{" "}
+                              <strong className={theme === "dark" ? "text-white/90" : "text-gray-800/90"}>macOS:</strong>{" "}
                               使用 Plash 或 WebLocker 等应用。
                             </li>
                             <li>
-                              <strong className="text-white/90">
+                              <strong className={theme === "dark" ? "text-white/90" : "text-gray-800/90"}>
                                 Android/iOS:
                               </strong>{" "}
                               大部分系统支持将网页快捷方式添加到主屏幕。
@@ -1025,11 +1029,19 @@ function App() {
                               type="text"
                               readOnly
                               value={`${shareUrl}&mode=zen`}
-                              className="w-full px-2 py-1 text-xs bg-white/10 rounded border border-white/20"
+                              className={`w-full px-2 py-1 text-xs rounded border ${
+                                theme === "dark"
+                                  ? "bg-white/10 border-white/20 text-white"
+                                  : "bg-gray-100 border-gray-300 text-gray-800"
+                              }`}
                             />
                             <button
                               onClick={handleCopy}
-                              className="px-3 py-1 text-xs bg-emerald-500/20 text-emerald-300 rounded hover:bg-emerald-500/40 transition-colors"
+                              className={`px-3 py-1 text-xs rounded transition-colors ${
+                                theme === "dark"
+                                  ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/40"
+                                  : "bg-emerald-500/20 text-emerald-700 hover:bg-emerald-500/30"
+                              }`}
                             >
                               复制
                             </button>
