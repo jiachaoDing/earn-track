@@ -1,0 +1,16 @@
+{
+  "name": "躺赚时钟",
+  "short_name": "躺赚时钟",
+  "description": "实时见证您的财富增长，让每一秒的价值都清晰可见。",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#030712",
+  "theme_color": "#030712",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+} 
