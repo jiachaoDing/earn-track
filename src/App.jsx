@@ -578,7 +578,7 @@ function App() {
                           theme === "dark" ? "text-white" : "text-gray-800"
                         }`}
                       >
-                        实时工资计算器
+                        躺赚时钟
                       </h1>
                     </div>
                     <div className="absolute top-4 right-4">
