@@ -37,10 +37,10 @@ import {
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  HoverCard,
-  HoverCardTrigger,
-  HoverCardContent,
-} from "./components/ui/hover-card";
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "./components/ui/popover";
 
 const currencies = [
   { value: "CNY", label: "人民币 (¥)", symbol: "¥" },
@@ -169,6 +169,11 @@ function App() {
       "workDaysPerWeek",
     ].some((p) => urlParams.has(p));
     if (hasUrlSettings) return "calculator";
+    
+    // 如果处于暂停状态，应该显示设置页面
+    const isPausedFromStorage = localStorage.getItem("earnTrack:isPaused") === "true";
+    if (isPausedFromStorage) return "settings";
+    
     return localStorage.getItem("earnTrack:view") || "settings";
   });
 
@@ -196,17 +201,43 @@ function App() {
       "workDaysPerWeek",
     ].some((p) => urlParams.has(p));
     if (hasUrlSettings) return true;
+    
+    // 检查是否处于暂停状态
+    const isPausedFromStorage = localStorage.getItem("earnTrack:isPaused") === "true";
     const savedTime = localStorage.getItem("earnTrack:startTime");
+    
+    // 如果有保存的时间但处于暂停状态，则不自动开始
+    if (savedTime && isPausedFromStorage) return false;
+    
     return !!savedTime;
   });
 
-  const [earnings, setEarnings] = useState(0);
-  const [elapsedTime, setElapsedTime] = useState(0);
+  const [earnings, setEarnings] = useState(() => {
+    const savedEarnings = localStorage.getItem("earnTrack:earnings");
+    return savedEarnings ? parseFloat(savedEarnings) : 0;
+  });
+  const [elapsedTime, setElapsedTime] = useState(() => {
+    const savedElapsedTime = localStorage.getItem("earnTrack:elapsedTime");
+    return savedElapsedTime ? parseFloat(savedElapsedTime) : 0;
+  });
   const { toast } = useToast();
   const [isMobile, setIsMobile] = useState(false);
   const [isZenMode, setIsZenMode] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isPaused, setIsPaused] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasUrlSettings = [
+      "salary",
+      "currency",
+      "cycle",
+      "workHours",
+      "workDaysPerWeek",
+    ].some((p) => urlParams.has(p));
+    if (hasUrlSettings) return false;
+    
+    // 从localStorage读取暂停状态
+    return localStorage.getItem("earnTrack:isPaused") === "true";
+  });
   const [showResetMessage, setShowResetMessage] = useState(false);
   const lastCelebratedMilestone = useRef(0);
   const clickTimeout = useRef(null);
@@ -223,7 +254,7 @@ function App() {
     }?${params.toString()}`;
   }, [settings]);
 
-  const appName = "躺赚时钟";
+  const appName = "实时工资计算器";
   const slogan = "每一秒，都在躺赚。";
 
   useEffect(() => {
@@ -293,6 +324,23 @@ function App() {
   useEffect(() => {
     localStorage.setItem("earnTrack:view", currentView);
   }, [currentView]);
+
+  // Persist pause state to localStorage
+  useEffect(() => {
+    if (isPaused) {
+      localStorage.setItem("earnTrack:isPaused", "true");
+    } else {
+      localStorage.removeItem("earnTrack:isPaused");
+    }
+  }, [isPaused]);
+
+  // Persist earnings and elapsed time when paused
+  useEffect(() => {
+    if (isPaused && (earnings > 0 || elapsedTime > 0)) {
+      localStorage.setItem("earnTrack:earnings", earnings.toString());
+      localStorage.setItem("earnTrack:elapsedTime", elapsedTime.toString());
+    }
+  }, [isPaused, earnings, elapsedTime]);
 
   useEffect(() => {
     const checkIsMobile = () => {
@@ -416,6 +464,10 @@ function App() {
     }
 
     setIsPaused(false);
+    // 清除暂停状态和保存的数据
+    localStorage.removeItem("earnTrack:isPaused");
+    localStorage.removeItem("earnTrack:earnings");
+    localStorage.removeItem("earnTrack:elapsedTime");
     lastCelebratedMilestone.current = 0;
     const now = Date.now();
     setStartTime(now);
@@ -426,10 +478,40 @@ function App() {
     setElapsedTime(0);
   };
 
+  const handlePause = () => {
+    setIsPaused(true);
+    setIsCalculating(false);
+    setCurrentView("settings");
+    // 保存暂停状态到localStorage
+    localStorage.setItem("earnTrack:isPaused", "true");
+    // 保存当前的收益和时间数据
+    localStorage.setItem("earnTrack:earnings", earnings.toString());
+    localStorage.setItem("earnTrack:elapsedTime", elapsedTime.toString());
+  };
+
+  const handleContinue = () => {
+    setIsPaused(false);
+    setIsCalculating(true);
+    setCurrentView("calculator");
+    // 清除暂停状态
+    localStorage.removeItem("earnTrack:isPaused");
+    
+    // 调整startTime以保持连续计算
+    // 新的startTime = 当前时间 - 已运行时间
+    const now = Date.now();
+    const adjustedStartTime = now - (elapsedTime * 1000);
+    setStartTime(adjustedStartTime);
+    localStorage.setItem("earnTrack:startTime", String(adjustedStartTime));
+  };
+
   const handleReset = (fromShortcut = false) => {
     if (!fromShortcut) {
       localStorage.removeItem("earnTrack:startTime");
     }
+    // 清除暂停状态和保存的数据
+    localStorage.removeItem("earnTrack:isPaused");
+    localStorage.removeItem("earnTrack:earnings");
+    localStorage.removeItem("earnTrack:elapsedTime");
     lastCelebratedMilestone.current = 0;
     setIsCalculating(false);
     setIsPaused(false);
@@ -503,11 +585,11 @@ function App() {
           <title>{appName}</title>
           <meta
             name="description"
-            content="躺赚时钟 - 一款能实时显示您财富增长的沉浸式时钟。无论是努力工作还是片刻摸鱼，每一秒的价值都清晰可见，让赚钱的快乐伴随您左右。"
+            content="实时工资计算器 - 一款能实时显示您财富增长的沉浸式时钟。无论是努力工作还是片刻摸鱼，每一秒的价值都清晰可见，让赚钱的快乐伴随您左右。"
           />
           <meta
             name="keywords"
-            content="躺赚时钟, 躺赚, 实时工资, 薪水计算器, 摸鱼, 时间变现, 财富增长, 被动收入, 工作动力"
+            content="实时工资计算器, 躺赚, 实时工资, 薪水计算器, 摸鱼, 时间变现, 财富增长, 被动收入, 工作动力"
           />
           <meta property="og:title" content={appName} />
           <meta
@@ -573,22 +655,22 @@ function App() {
                           }`}
                         />
                       </div>
-                      <h1
-                        className={`text-xl md:text-2xl font-bold ${
-                          theme === "dark" ? "text-white" : "text-gray-800"
-                        }`}
-                      >
-                        躺赚时钟
-                      </h1>
-                      <p
-                        className={`text-sm ${
-                          theme === "dark" ? "text-gray-400" : "text-gray-500"
-                        }`}
-                      >
-                        {slogan}
-                      </p>
-
-                      
+                      <div className="flex flex-col">
+                        <h1
+                          className={`text-xl md:text-2xl font-bold ${
+                            theme === "dark" ? "text-white" : "text-gray-800"
+                          }`}
+                        >
+                          实时工资计算器
+                        </h1>
+                        <p
+                          className={`text-sm ${
+                            theme === "dark" ? "text-gray-400" : "text-gray-500"
+                          }`}
+                        >
+                          {slogan}
+                        </p>
+                      </div>
                     </div>
                     <div className="absolute top-4 right-4">
                       <Button
@@ -609,8 +691,12 @@ function App() {
                       </Button>
                     </div>
                   </div>
-
+                  {/* 输入的参数 */}
                   <div className="p-6 md:p-8 space-y-6">
+
+                    {!startTime && currentView === "settings" && (
+                      <>
+                    {/* 计算周期 */}
                     <div className="space-y-2">
                       <Label
                         htmlFor="cycle"
@@ -657,7 +743,8 @@ function App() {
                         </SelectContent>
                       </Select>
                     </div>
-
+                    
+                    {/* 薪资金额 */}
                     <div className="space-y-2">
                       <Label
                         htmlFor="salary"
@@ -685,8 +772,8 @@ function App() {
                               : "bg-white border-gray-300 text-gray-800 placeholder:text-gray-400"
                           }
                         />
-                        <HoverCard>
-                          <HoverCardTrigger asChild>
+                        <Popover>
+                          <PopoverTrigger asChild>
                             <Button
                               variant="outline"
                               size="icon"
@@ -698,13 +785,13 @@ function App() {
                             >
                               <Sparkles className="h-4 w-4 text-yellow-400" />
                             </Button>
-                          </HoverCardTrigger>
-                          <HoverCardContent
+                          </PopoverTrigger>
+                          <PopoverContent
                             className={`w-auto p-2 ${
                               theme === "dark"
-                                ? "bg-gray-800 border-gray-600"
-                                : "bg-white border-gray-200"
-                            }`}
+                                ? "bg-gray-800/90 border-gray-600"
+                                : "bg-white/90 border-gray-200"
+                            } border rounded-xl`}
                           >
                             <div className="grid grid-cols-2 gap-2">
                               {quickSelectOptions[settings.cycle].map((opt) => (
@@ -728,11 +815,12 @@ function App() {
                                 </Button>
                               ))}
                             </div>
-                          </HoverCardContent>
-                        </HoverCard>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </div>
 
+                    {/* 每天工作（小时） */}
                     {settings.cycle !== "hourly" && (
                       <div className="space-y-2">
                         <Label
@@ -775,6 +863,7 @@ function App() {
                       </div>
                     )}
 
+                    {/* 每周工作天数 */}
                     {settings.cycle !== "hourly" &&
                       settings.cycle !== "daily" && (
                         <div className="space-y-2">
@@ -832,6 +921,7 @@ function App() {
                         </div>
                       )}
 
+                    {/* 货币类型 */}
                     <div className="space-y-2">
                       <Label
                         htmlFor="currency"
@@ -880,14 +970,67 @@ function App() {
                         </SelectContent>
                       </Select>
                     </div>
+                    </>
+                    )}
 
-                    <Button
-                      onClick={handleStartCalculation}
-                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-lg text-base transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/50"
-                    >
-                      <Play className="h-5 w-5 mr-2" />
-                      开始计算
-                    </Button>
+                    {/* 显示暂停状态信息 */}
+                    {startTime && (
+                      <div className={`w-full rounded-xl p-4 space-y-2 text-sm mb-4 ${
+                        theme === "dark"
+                          ? "bg-orange-500/20 border border-orange-500/30"
+                          : "bg-orange-50 border border-orange-200"
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-orange-500" />
+                            <span className={theme === "dark" ? "text-orange-300" : "text-orange-700"}>
+                              计算已暂停
+                            </span>
+                          </span>
+                          <span className="font-mono text-orange-500">
+                            {formatTime(elapsedTime)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className={theme === "dark" ? "text-orange-300" : "text-orange-700"}>
+                            当前收益
+                          </span>
+                          <span className="font-mono font-bold text-orange-500">
+                            {selectedCurrency?.symbol}{formatEarnings(earnings)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 根据计算状态显示不同按钮 */}
+                    {!startTime ? (
+                      // 没有开始过计算，显示开始计算按钮
+                      <Button
+                        onClick={handleStartCalculation}
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-lg text-base transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/50"
+                      >
+                        <Play className="h-5 w-5 mr-2" />
+                        开始计算
+                      </Button>
+                    ) : (
+                      // 有暂停的计算，显示继续和重新开始按钮
+                      <div className="space-y-3">
+                        <Button
+                          onClick={handleContinue}
+                          className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold py-3 rounded-lg text-base transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/50"
+                        >
+                          <Play className="h-5 w-5 mr-2" />
+                          继续计算
+                        </Button>
+                        <Button
+                          onClick={() => handleReset()}
+                          variant="outline"
+                          className="w-full font-semibold py-3 rounded-lg text-base transition-all duration-300 transform hover:scale-105"
+                        >
+                          重新开始
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -919,7 +1062,7 @@ function App() {
                     }
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleReset();
+                      handlePause();
                     }}
                   >
                     <ArrowLeft className="h-5 w-5" />
@@ -949,8 +1092,8 @@ function App() {
                       <Moon className="h-5 w-5" />
                     )}
                   </Button>
-                  <HoverCard>
-                    <HoverCardTrigger asChild>
+                  <Popover>
+                    <PopoverTrigger asChild>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -963,13 +1106,13 @@ function App() {
                       >
                         <HelpCircle className="h-5 w-5" />
                       </Button>
-                    </HoverCardTrigger>
-                    <HoverCardContent
-                      className={`w-80 ${
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className={`w-72 max-w-[calc(100vw-2rem)] p-4 ${
                         theme === "dark"
-                          ? "bg-gray-800/80 border-gray-700 text-white"
-                          : "bg-white/80 border-gray-200 text-gray-800"
-                      } backdrop-blur-lg`}
+                          ? "bg-gray-800/90 border-gray-700 text-white"
+                          : "bg-white/90 border-gray-200 text-gray-800"
+                      } backdrop-blur-lg border rounded-xl`}
                       sideOffset={10}
                     >
                       <div className="space-y-4">
@@ -1048,8 +1191,8 @@ function App() {
                           </div>
                         </div>
                       </div>
-                    </HoverCardContent>
-                  </HoverCard>
+                    </PopoverContent>
+                  </Popover>
                 </motion.div>
 
                 <div className="flex flex-col items-center justify-center space-y-4 md:space-y-8">
