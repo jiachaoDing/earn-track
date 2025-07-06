@@ -191,6 +191,7 @@ logger.error = (msg, options) => {
 
 export default defineConfig({
 	customLogger: logger,
+	base: process.env.NODE_ENV === 'production' ? '/earn-track/' : '/',
 	plugins: [
 		...(isDev ? [inlineEditPlugin(), editModeDevPlugin()] : []),
 		react(),
